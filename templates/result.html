@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Results</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 40px;
+        }
+
+        .result-container {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 30px;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+            padding: 12px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        td {
+            background-color: #ffffff;
+        }
+
+        .probabilities {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .download-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            text-decoration: none;
+            background-color: #28a745;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .download-link:hover {
+            background-color: #218838;
+        }
+
+        .back-link {
+            text-align: center;
+            display: block;
+            margin-top: 20px;
+            font-size: 1rem;
+            color: #007BFF;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Prediction Results</h1>
+
+    <div class="result-container">
+        {% if predictions %}
+            <h2>Predictions for the selected model</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Predicted Class</th>
+                        <th>Probabilities (if available)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for model, result in predictions.items() %}
+                        <tr>
+                            <td>{{ model }}</td>
+                            <td>{{ result['Predicted Class'] }}</td>
+                            <td class="probabilities">
+                                {% if result['Probabilities'] %}
+                                    {{ result['Probabilities'] }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        {% if file_predictions %}
+            <h2>Predictions for multiple patients</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Patient ID</th>
+                        <th>Model</th>
+                        <th>Predicted Class</th>
+                        <th>Probabilities (if available)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for patient in file_predictions %}
+                        <tr>
+                            <td>{{ patient['Patient ID'] }}</td>
+                            <td>{{ patient['Model'] }}</td>
+                            <td>{{ patient['Predicted Class'] }}</td>
+                            <td class="probabilities">
+                                {% if patient['Probabilities'] %}
+                                    {{ patient['Probabilities'] }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Provide download link for the result file -->
+            <a href="{{ url_for('download_predictions', filename='predictions.xlsx') }}" class="download-link" download>Download Results</a>
+        {% endif %}
+
+        <a href="/" class="back-link

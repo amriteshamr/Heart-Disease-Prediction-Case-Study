@@ -1,10 +1,13 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, url_for
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
+import os
+import matplotlib.pyplot as plt
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
@@ -19,13 +22,7 @@ important_features = correlation_with_target[correlation_with_target.abs() > 0.2
 X = data[important_features]
 y = data['target']
 
-# Calculate feature ranges
-feature_ranges = {
-    feature: (data[feature].min(), data[feature].max()) for feature in important_features
-}
-
-# Remove range for 'age' and add description for 'sex'
-feature_ranges['age'] = None
+# Feature descriptions
 feature_descriptions = {
     'thalach': "Maximum heart rate achieved",
     'oldpeak': "ST depression induced by exercise relative to rest",
@@ -48,53 +45,94 @@ models = {
     'Random Forest': RandomForestClassifier(random_state=42)
 }
 
-# Train and evaluate each model
+# Train models
 trained_models = {}
 for name, model in models.items():
     model.fit(X_train, y_train)
     trained_models[name] = model
 
-@app.route('/')
-def home():
-    return render_template(
-        'index.html',
-        features=important_features.tolist(),  # Ensure this is a list
-        feature_ranges=feature_ranges,
-        feature_descriptions=feature_descriptions
-    )
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
 @app.route('/single_patient')
 def single_patient():
     return render_template('single_patient.html', features=important_features, feature_descriptions=feature_descriptions)
+
 
 @app.route('/upload_csv')
 def upload_csv():
     return render_template('upload_csv.html')
 
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    input_data = []
-    for feature in important_features:
-        value = float(request.form[feature])
-        input_data.append(value)
-
+@app.route('/single_result', methods=['POST'])
+def single_result():
+    input_data = [float(request.form[feature]) for feature in important_features]
     input_df = pd.DataFrame([input_data], columns=important_features)
+    selected_model = request.form['model']
+
+    model = trained_models[selected_model]
+    prediction = model.predict(input_df)[0]
+    probabilities = model.predict_proba(input_df)[0].tolist() if hasattr(model, 'predict_proba') else None
+
+    result = {
+        'Model': selected_model,
+        'Predicted Class': int(prediction),
+        'Probabilities': probabilities
+    }
+
+    return render_template('single_result.html', result=result)
+
+
+@app.route('/csv_result', methods=['POST'])
+def csv_result():
+    if 'file' not in request.files:
+        return "No file uploaded. Please upload a .csv or .xlsx file.", 400
+
+    file = request.files['file']
+    selected_model = request.form['model']
+
+    if file.filename.endswith('.csv'):
+        data = pd.read_csv(file)
+    elif file.filename.endswith('.xlsx'):
+        data = pd.read_excel(file)
+    else:
+        return "Unsupported file format. Please upload a .csv or .xlsx file.", 400
+
+    missing_columns = [col for col in important_features if col not in data.columns]
+    if missing_columns:
+        return f"Missing columns in the uploaded file: {', '.join(missing_columns)}", 400
+
+    model = trained_models[selected_model]
     predictions = {}
 
-    for name, model in trained_models.items():
+    for index, row in data.iterrows():
+        input_df = pd.DataFrame([row[important_features]])
         prediction = model.predict(input_df)[0]
-        probability = model.predict_proba(input_df)[0] if hasattr(model, 'predict_proba') else None
-        predictions[name] = {
+        probabilities = model.predict_proba(input_df)[0].tolist() if hasattr(model, 'predict_proba') else None
+
+        predictions[index] = {
             'Predicted Class': int(prediction),
-            'Probabilities': probability.tolist() if probability is not None else None
+            'Probabilities': probabilities
         }
 
-    return render_template('result.html', predictions=predictions)
+    # Generate graph
+    graph_filename = "static/csv_predictions_graph.png"
+    positive_predictions = sum(pred['Predicted Class'] for pred in predictions.values())
+    negative_predictions = len(predictions) - positive_predictions
+
+    plt.figure(figsize=(6, 4))
+    plt.bar(['Positive', 'Negative'], [positive_predictions, negative_predictions], color=['green', 'red'])
+    plt.title(f"Prediction Results for {selected_model}")
+    plt.xlabel("Outcome")
+    plt.ylabel("Number of Patients")
+    plt.savefig(graph_filename)
+    plt.close()
+
+    return render_template('csv_result.html', model=selected_model, predictions=predictions, graph_url=url_for('static', filename='csv_predictions_graph.png'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

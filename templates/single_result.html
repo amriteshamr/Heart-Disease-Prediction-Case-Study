@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Heart Disease Prediction</title>
+    <title>Single Patient Results</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -19,18 +19,22 @@
             margin-bottom: 30px;
         }
 
-        .button {
+        .result {
+            margin-bottom: 20px;
+            text-align: left;
             display: inline-block;
+            max-width: 600px;
+        }
+
+        .button {
             background-color: #007BFF;
             color: white;
-            padding: 15px 30px;
-            margin: 15px;
+            padding: 12px 20px;
             border: none;
             border-radius: 5px;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             cursor: pointer;
-            transition: background-color 0.3s ease;
-            text-decoration: none;
+            margin-top: 20px;
         }
 
         .button:hover {
@@ -38,10 +42,14 @@
         }
     </style>
 </head>
-
 <body>
-    <h1>Heart Disease Prediction</h1>
-    <a href="/single_patient">Enter Single Patient Details</a>
-    <a href="/upload_csv">Upload CSV File</a>
+    <h1>Single Patient Prediction</h1>
+<p><strong>Model:</strong> {{ result['Model'] }}</p>
+<p><strong>Predicted Class:</strong> {{ result['Predicted Class'] }}</p>
+{% if result['Probabilities'] %}
+    <p><strong>Probabilities:</strong> {{ result['Probabilities'] }}</p>
+{% endif %}
+    
+    <a href="/" class="button">Go Back</a>
 </body>
 </html>
